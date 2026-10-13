@@ -3,7 +3,7 @@ services:
     depends_on:
       database:
         condition: service_healthy
-    image: ghcr.io/generacja-innowacja/nestjs-project-boilerplate
+    image: kaluzny-blog-back
     build:
       context: .
       target: development
@@ -18,7 +18,7 @@ services:
       test: 'curl --fail http://localhost:3000 || exit 1'
       interval: 1s
       retries: 20
-      start_period: 5s
+      start_period: 60s
       timeout: 1s
 
   database:

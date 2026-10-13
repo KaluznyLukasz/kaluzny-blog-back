@@ -4,12 +4,11 @@ import { INestApplication } from '@nestjs/common';
 
 function createSwaggerConfig() {
   return new DocumentBuilder()
-    .setTitle('Nest.js project boilerplate API')
-    .setDescription('This is fancy documentation for API.')
+    .setTitle('Kałużny Blog API')
+    .setDescription("REST API for the back end of Łukasz Kałużny's blog.")
     .setVersion(pack.version)
     .addServer('http://localhost', 'Local development')
-    .setContact('Oskar Barcz', 'https://barcz.me', 'github@barcz.me')
-    .setLicense('Unlicense', 'https://opensource.org/licenses/Unlicense')
+    .setContact('Łukasz Kałużny', 'https://github.com/KaluznyLukasz', '')
     .addBearerAuth(
       {
         type: 'http',

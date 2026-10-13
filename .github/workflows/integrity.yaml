@@ -35,3 +35,6 @@ jobs:
         run: docker compose exec app npm run lint
       - name: Run end-to-end tests
         run: docker compose exec app npm run test:functional
+      - name: Show app logs
+        if: failure()
+        run: docker compose logs app

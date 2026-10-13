@@ -1,97 +1,132 @@
-# Nest.js project boilerplate nestjs-project-boilerplate
+# Kałużny Blog API
 
-## Repository contents
+Back end of Łukasz Kałużny's blog: a REST API built with Nest.js and PostgreSQL.
 
-Repository contains boilerplate project using Nest.js.
-
-Project is using Node.js and TypeScript in versions listed below:
+## Tech stack
 
 | Technology | Version |
 | ---------- | ------- |
-| Node.js    | 24.10   |
+| Node.js    | 24      |
 | TypeScript | 5.8     |
+| Nest.js    | 11      |
+| Prisma     | 7       |
+| PostgreSQL | 16      |
 
-Main dependencies are Nest.js and Prisma ORM in versions listed below.
+Everything runs in Docker containers, described in `compose.yaml`:
 
-| Vendor  | Version |
-| ------- | ------- |
-| Nest.js | ^11.1   |
-| Prisma  | ^6.7.0  |
+| Service    | What it runs        | Address on your machine                 |
+| ---------- | ------------------- | --------------------------------------- |
+| `app`      | Nest.js API         | http://localhost (port 3000 inside)     |
+| `database` | PostgreSQL database | `localhost:5432`, user `user`, db `app` |
 
-## Infrastructure
+## Requirements
 
-We use the following services:
+- [Git](https://git-scm.com/)
+- [Docker](https://docs.docker.com/get-docker/) with Docker Compose
 
-- AWS EC2 instance with Dokku, with:
-    - app container (docker container locally)
-    - PostgreSQL database (PostgreSQL container locally)
+You do not need Node.js on your machine. All `npm`, `npx` and `node` commands run inside the `app` container.
 
-Locally, they are set up using `docker compose`.
+## Getting started
 
-### Setting project up
+1. Clone the repository:
 
-This app uses docker-based virtualization to run. In order to set up project, follow these steps:
-
-1. Clone project by running:
     ```shell
-    git clone git@github.com:oskarbarcz/nestjs-project-boilerplate.git
+    git clone https://github.com/KaluznyLukasz/kaluzny-blog-back.git
+    cd kaluzny-blog-back
     ```
-2. Prepare environment variable file by copying .env.dist to .env and fill it with your data.
+
+2. Create your environment file from the template:
+
     ```shell
-    cd nestjs-project-boilerplate
     cp .env.dist .env
     ```
-3. Use `docker compose` to set up the environment
+
+3. Build and start the containers, and wait until both are healthy:
 
     ```shell
-    docker compose up -d --build
+    docker compose up -d --build --wait
     ```
 
-    Packages, database schema, seed data will be configured automatically.
+    On every start the app container installs packages, generates the Prisma client, applies migrations, seeds the
+    database and starts Nest.js in watch mode, so code changes reload automatically.
 
-4. Your project should be up and running. Open browser and go to http://localhost/api to see the api documentation.
-   You can preview app logs by running:
-    ```shell
-    docker compose logs -f app
-    ```
+4. Check that it works:
+    - http://localhost/ returns the status and the current version, for example `{"status":"OK","version":"0.1.0"}`
+    - http://localhost/api shows the Swagger documentation
 
-### Running the project tips
+Useful commands:
 
-> **Do not execute NPM or any other commands regarding project from your host machine, use container shell instead.**
-> For example, to generate Prisma schema run:
+```shell
+# follow app logs
+docker compose logs -f app
+
+# stop the containers
+docker compose down
+```
+
+## Working in the container
+
+> **Do not run `npm`, `npx` or `node` on your own machine.** Run them in the app container, so everyone uses the same
+> Node.js version and the same packages:
 >
 > ```shell
 > docker compose exec app npm run lint
 > ```
->
-> It will execute the `npm run lint` command in the container shell.
 
-To shut down the containers run:
+## Code quality and tests
+
+Run these checks before you push. CI runs the same checks on every pull request.
 
 ```shell
-docker compose down
+# code formatting (Prettier), use format:fix to fix
+docker compose exec app npm run format
+
+# static code analysis (ESLint), use lint:fix to fix
+docker compose exec app npm run lint
+
+# functional tests (Cucumber)
+docker compose exec app npm run test:functional
 ```
 
-## Testing
+Functional tests live in the `features` directory. They are written in Gherkin and send real HTTP requests to the
+running app.
 
-To run tests, execute the following commands:
+## Database
 
-```bash
-# unit tests
-$ docker compose exec app npm run test
+The schema lives in `prisma/schema.prisma` and seed data in `prisma/seed`. Migrations go to `prisma/migrations`.
 
-# functional tests
-$ docker compose exec app npm run test:functional
+```shell
+# apply migrations
+docker compose exec app npm run database:migrate
+
+# load seed data
+docker compose exec app npm run database:seed
+
+# drop all data and recreate the schema
+docker compose exec app npm run database:reset
 ```
 
-We use **Jest** for unit tests, and **cucumber-js** for functional tests. Unit tests are stored in the `src` directory
-just near the tested module, while functional tests are stored in the `features` directory.
+## Versioning and releases
 
-## Release & deploy
+The project follows [semantic versioning](https://semver.org/). Every pull request must bump the version in
+`package.json`:
 
-> Before merging Pull Request to the main branch, make sure to bump the project version in the `package.json` file,
-> line `3`. Then it's a good practice to run `npm install` inside a docker container to update the `package-lock.json`
-> file.
->
-> Not bumping the version will result in the release failure. There is a step in CI that will protect the main branch
-> from being merged without bumping the version.
+- minor version (`0.1.0` → `0.2.0`) for features,
+- patch version (`0.1.0` → `0.1.1`) for fixes.
+
+After the bump, update `package-lock.json`:
+
+```shell
+docker compose exec app npm install
+```
+
+CI fails if the version in `package.json` was already released. Every merge to `main` creates a git tag and a GitHub
+release for that version.
+
+## Troubleshooting
+
+- **"Port is already allocated" for 80 or 5432**: another program uses the port, often a local PostgreSQL or another
+  Docker project. Stop it and start the containers again.
+- **The app does not start**: read the logs with `docker compose logs app`.
+- **Windows**: use WSL 2 and keep the repository inside the WSL file system. Make sure Git does not convert line
+  endings to CRLF, or the CI check fails.
