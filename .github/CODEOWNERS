@@ -1,0 +1,17 @@
+# By default, only backend developers should review changes
+*                  @gi-org-pl/backs
+
+# Files and directories required to be reviewed by the admins
+/.github/          @gi-org-pl/admins
+/docker/           @gi-org-pl/admins
+/infra/            @gi-org-pl/admins
+/.env.dist         @gi-org-pl/admins
+/.gitignore        @gi-org-pl/admins
+/.prettierrc       @gi-org-pl/admins
+/compose.yaml      @gi-org-pl/admins
+/cucumber.js       @gi-org-pl/admins
+/Dockerfile        @gi-org-pl/admins
+/eslint.config.mjs @gi-org-pl/admins
+/nest-cli.json     @gi-org-pl/admins
+/prisma.config.ts  @gi-org-pl/admins
+/tsconfig.json     @gi-org-pl/admins

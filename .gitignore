@@ -1,0 +1,9 @@
+/.idea/
+/coverage/
+/node_modules/
+/prisma/client
+/dist/
+/output
+
+/.env
+/.eslintcache

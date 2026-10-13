@@ -1,0 +1,52 @@
+name: 'deploy'
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  tag:
+    runs-on: 'ubuntu-24.04'
+    steps:
+      - name: 'Clone repository'
+        uses: 'actions/checkout@v6'
+      - name: 'Release and push git tag'
+        run: "git tag $(jq -r '.version' package.json) && git push --tags"
+      - name: 'Create a GitHub release'
+        run: "gh release create $(jq -r '.version' package.json) --generate-notes"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  deploy:
+    needs: 'tag'
+    runs-on: 'ubuntu-24.04'
+    steps:
+      - name: 'Login to ghcr.io'
+        uses: 'docker/login-action@v2'
+        with:
+          registry: 'ghcr.io'
+          username: '${{github.actor}}'
+          password: '${{secrets.GITHUB_TOKEN}}'
+      - name: 'Clone repository'
+        uses: 'actions/checkout@v6'
+      - name: 'Set up environment'
+        run: 'cp .env.dist .env'
+      - name: 'Build app docker image'
+        run: |
+          AUTHOR=$(jq -r '.author' package.json)
+          NAME=$(jq -r '.name' package.json)
+          VERSION=$(jq -r '.version' package.json)
+
+          IMAGE="ghcr.io/${AUTHOR}/${NAME}"
+          docker build --target production -t "${IMAGE}:${VERSION}" .
+
+          # tag same image as :latest
+          docker tag "${IMAGE}:${VERSION}" "${IMAGE}:latest"
+      - name: 'Push docker image to ghcr.io'
+        run: |
+          AUTHOR=$(jq -r '.author' package.json)
+          NAME=$(jq -r '.name' package.json)
+          VERSION=$(jq -r '.version' package.json)
+
+          IMAGE="ghcr.io/${AUTHOR}/${NAME}"
+          docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:latest"

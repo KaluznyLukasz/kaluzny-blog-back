@@ -1,0 +1,37 @@
+name: 'integrity'
+
+on:
+  pull_request:
+
+jobs:
+  files:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Check for CRLF line endings
+        uses: gi-org-pl/check-crlf-action@v1
+      - name: Check for file permission changes
+        uses: gi-org-pl/check-file-permissions-action@v1
+      - name: Check app version is unique
+        uses: gi-org-pl/check-version-action@v1
+        with:
+          version: "$(jq -r '.version' package.json)"
+  code:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set up environment
+        run: cp .env.dist .env
+      - name: Run Docker environment
+        run: docker compose up -d --build --wait
+        timeout-minutes: 3
+      - name: Run code formatting check
+        run: docker compose exec app npm run format
+      - name: Run static code analysis
+        run: docker compose exec app npm run lint
+      - name: Run end-to-end tests
+        run: docker compose exec app npm run test:functional
