@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Back end of Łukasz Kałużny's blog: Nest.js 11, Prisma 7, PostgreSQL 16, Node 24. Everything runs in Docker.
 
@@ -39,7 +39,8 @@ src/modules/<domain>/
 ```
 
 - `application` talks to the database only through repositories from `infra`. It never touches HTTP.
-- Domain errors (for example `ArticleNotFoundError`) are thrown in `application`; the controller turns them into HTTP exceptions.
+- Domain errors extend Nest HTTP exceptions (for example `ArticleNotFoundError extends NotFoundException`) and are thrown in
+  `application`; Nest turns them into the HTTP response, controllers need no try/catch.
 - Reads go through queries (`@nestjs/cqrs`, `QueryBus`). One query class, one handler.
 - HTTP APIs keep a version in the path: `/api/v1/...`. Swagger UI is at `/api`, its JSON at `/api-json`.
 - Every endpoint documents every response code it can give in Swagger (`@ApiOkResponse`, `@ApiBadRequestResponse`,
@@ -69,10 +70,11 @@ src/modules/<domain>/
 
 ## Tests
 
-- Cucumber steps live in `features/_context/`, helpers in `features/_helper/`.
+- Cucumber steps live in `features/_context/` (HTTP steps in `rest-api.context.ts`, database steps in
+  `database.context.ts`), helpers in `features/_helper/`.
 - `Given I use seed data` = `prisma migrate reset --force` + `prisma db seed`: the database holds exactly the seed data.
 - `Given I use an empty database` = `prisma migrate reset --force`.
-- The test HTTP client does not keep connections alive (see comment in `rest-api.context.ts`), otherwise slow
+- The test HTTP client does not keep connections alive (`httpAgent` in `rest-api.context.ts`), otherwise slow
   database-reset steps cause `socket hang up`.
 - Seed articles (`prisma/seed/articles.seed.ts`) are used as expected data in scenarios. Change them and the features together.
   Two seed articles share one `publishedAt` on purpose, to test the ID tie-breaker in the listing order.

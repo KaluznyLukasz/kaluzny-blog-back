@@ -1,7 +1,6 @@
 import { When, Then, Given, After, DataTable } from '@cucumber/cucumber';
 import axios, { AxiosResponse } from 'axios';
 import expect from 'expect';
-import { execSync } from 'child_process';
 import { Agent } from 'http';
 import { deepCompare } from '../_helper/deep-compare';
 
@@ -9,33 +8,6 @@ const apiBaseUrl = 'http://localhost:3000';
 const httpAgent = new Agent({ keepAlive: false });
 let apiToken: string | null = null;
 let apiResponse: AxiosResponse;
-
-function resetDatabase() {
-  execSync('npx prisma migrate reset --force', { stdio: 'pipe' });
-}
-
-function seedDatabase() {
-  execSync('npx prisma db seed', { stdio: 'pipe' });
-}
-
-Given('I use seed data', () => {
-  resetDatabase();
-  seedDatabase();
-});
-
-Given('I use an empty database', () => {
-  resetDatabase();
-});
-
-Given(
-  'the database is migrated and seeded {int} more times',
-  (times: number) => {
-    for (let i = 0; i < times; i++) {
-      execSync('npm run database:migrate', { stdio: 'pipe' });
-      execSync('npm run database:seed', { stdio: 'pipe' });
-    }
-  },
-);
 
 Given('I use admin token', async () => {
   apiToken = 'admin-token';

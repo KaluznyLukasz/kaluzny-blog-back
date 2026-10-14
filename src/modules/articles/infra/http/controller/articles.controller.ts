@@ -1,4 +1,4 @@
-import { Controller, Get, NotFoundException } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import {
   ApiBadRequestResponse,
@@ -13,7 +13,6 @@ import { GenericNotFoundResponse } from '../../../../../core/http/response/not-f
 import { UuidParam } from '../../../../../core/validation/decorator/uuid-v4-param.decorator';
 import { GetAllArticlesQuery } from '../../../application/query/get-all-articles.query';
 import { GetArticleByIdQuery } from '../../../application/query/get-article-by-id.query';
-import { ArticleNotFoundError } from '../../../model/article-not-found.error';
 import {
   ArticleResponse,
   toArticleResponse,
@@ -59,16 +58,8 @@ export class ArticlesController {
     type: GenericNotFoundResponse,
   })
   async getById(@UuidParam('id') id: string): Promise<ArticleResponse> {
-    try {
-      const article = await this.queryBus.execute(new GetArticleByIdQuery(id));
+    const article = await this.queryBus.execute(new GetArticleByIdQuery(id));
 
-      return toArticleResponse(article);
-    } catch (error) {
-      if (error instanceof ArticleNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-
-      throw error;
-    }
+    return toArticleResponse(article);
   }
 }
