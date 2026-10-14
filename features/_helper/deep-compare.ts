@@ -27,6 +27,10 @@ export const deepCompare = (actual: any, expected: any) => {
 
   if (actual === expected) return;
 
+  if (Array.isArray(expected)) {
+    expect(Array.isArray(actual)).toBe(true);
+  }
+
   if (typeof actual !== 'object' || actual === null || expected === null) {
     expect(actual).toBe(expected);
     return;
