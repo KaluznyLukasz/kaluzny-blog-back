@@ -102,9 +102,21 @@ docker compose exec app npm run database:migrate
 # load seed data
 docker compose exec app npm run database:seed
 
-# drop all data and recreate the schema
+# drop all data and apply the migrations again (empty tables, run database:seed afterwards)
 docker compose exec app npm run database:reset
 ```
+
+The seed runs on every start of the app container, so it is idempotent: articles that are already there are left
+untouched and missing ones are created.
+
+## API
+
+| Endpoint                   | Answers                                                                            |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| `GET /api/v1/articles`     | `200` all articles, newest first (an empty list when there are none)               |
+| `GET /api/v1/articles/:id` | `200` the article, `400` when the ID is not a valid UUID, `404` when it is unknown |
+
+Every endpoint and response code is documented in Swagger at http://localhost/api.
 
 ## Versioning and releases
 
