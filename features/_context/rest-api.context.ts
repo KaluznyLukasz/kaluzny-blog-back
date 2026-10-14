@@ -1,16 +1,47 @@
-import { When, Then, Given, After } from '@cucumber/cucumber';
+import { When, Then, Given, After, DataTable } from '@cucumber/cucumber';
 import axios, { AxiosResponse } from 'axios';
 import expect from 'expect';
 import { execSync } from 'child_process';
+import { Agent } from 'http';
 import { deepCompare } from '../_helper/deep-compare';
 
 const apiBaseUrl = 'http://localhost:3000';
+// Steps that reset the database take about as long as the server keeps an idle connection open (5 s),
+// so a reused connection could be closed by the server just before the next request: "socket hang up".
+const httpAgent = new Agent({ keepAlive: false });
 let apiToken: string | null = null;
 let apiResponse: AxiosResponse;
 
+// Prisma 7 no longer seeds after `migrate reset` and no longer knows `--skip-generate`,
+// so the database is reset first and seeded in a separate command.
+// Output is piped, so when a command fails its message carries the Prisma error.
+function resetDatabase() {
+  execSync('npx prisma migrate reset --force', { stdio: 'pipe' });
+}
+
+function seedDatabase() {
+  execSync('npx prisma db seed', { stdio: 'pipe' });
+}
+
 Given('I use seed data', () => {
-  execSync('npx prisma migrate reset --force --skip-generate > /dev/null');
+  resetDatabase();
+  seedDatabase();
 });
+
+Given('I use an empty database', () => {
+  resetDatabase();
+});
+
+// What the dev entrypoint does on every start of the app container.
+Given(
+  'the database is migrated and seeded {int} more times',
+  (times: number) => {
+    for (let i = 0; i < times; i++) {
+      execSync('npm run database:migrate', { stdio: 'pipe' });
+      execSync('npm run database:seed', { stdio: 'pipe' });
+    }
+  },
+);
 
 Given('I use admin token', async () => {
   apiToken = 'admin-token';
@@ -27,6 +58,7 @@ When(
     apiResponse = await axios.request({
       method: method,
       url: url,
+      httpAgent,
       validateStatus: () => true,
       headers: apiToken === '' ? {} : { Authorization: `Bearer ${apiToken}` },
     });
@@ -41,6 +73,7 @@ When(
       method: method,
       url: url,
       data: JSON.parse(body),
+      httpAgent,
       validateStatus: () => true,
       headers: apiToken === '' ? {} : { Authorization: `Bearer ${apiToken}` },
     });
@@ -63,6 +96,19 @@ Then('the response body should contain:', async function (docString: string) {
   const actual = apiResponse.data;
 
   deepCompare(actual, expected);
+});
+
+Then(
+  'the response body should list articles in this order:',
+  (titles: DataTable) => {
+    expect(apiResponse.data.map((article) => article.title)).toEqual(
+      titles.raw().flat(),
+    );
+  },
+);
+
+Then('the response body should have {int} items', (count: number) => {
+  expect(apiResponse.data).toHaveLength(count);
 });
 
 Then('I dump response', () => {
