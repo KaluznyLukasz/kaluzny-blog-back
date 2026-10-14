@@ -6,15 +6,10 @@ import { Agent } from 'http';
 import { deepCompare } from '../_helper/deep-compare';
 
 const apiBaseUrl = 'http://localhost:3000';
-// Steps that reset the database take about as long as the server keeps an idle connection open (5 s),
-// so a reused connection could be closed by the server just before the next request: "socket hang up".
 const httpAgent = new Agent({ keepAlive: false });
 let apiToken: string | null = null;
 let apiResponse: AxiosResponse;
 
-// Prisma 7 no longer seeds after `migrate reset` and no longer knows `--skip-generate`,
-// so the database is reset first and seeded in a separate command.
-// Output is piped, so when a command fails its message carries the Prisma error.
 function resetDatabase() {
   execSync('npx prisma migrate reset --force', { stdio: 'pipe' });
 }
@@ -32,7 +27,6 @@ Given('I use an empty database', () => {
   resetDatabase();
 });
 
-// What the dev entrypoint does on every start of the app container.
 Given(
   'the database is migrated and seeded {int} more times',
   (times: number) => {

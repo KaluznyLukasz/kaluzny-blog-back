@@ -9,7 +9,6 @@ export class ArticlesRepository {
 
   async findAll(): Promise<Article[]> {
     const rows = await this.prisma.article.findMany({
-      // The ID breaks ties, so articles published at the same moment always come in the same order.
       orderBy: [{ publishedAt: 'desc' }, { id: 'asc' }],
     });
 

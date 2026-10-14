@@ -1,6 +1,3 @@
-// Fixed UUIDs make the seed idempotent: running it again finds the same rows instead of adding new ones.
-// The two articles published at 2025-03-20T18:00:00.000Z are listed in reverse ID order on purpose.
-// Without a tie-breaker the database could return them in insertion order, with it they are sorted by ID.
 export const articles = [
   {
     id: '5e1f0a2b-0001-4000-8000-000000000001',
