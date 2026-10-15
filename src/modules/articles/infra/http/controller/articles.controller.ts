@@ -125,9 +125,7 @@ export class ArticlesController {
     await this.commandBus.execute(
       new CreateArticleCommand(id, request.title, request.content),
     );
-    const article = await this.queryBus.execute(new GetArticleByIdQuery(id));
-
-    return toArticleResponse(article);
+    return await this.queryBus.execute(new GetArticleByIdQuery(id));
   }
 
   @Patch(':id')
