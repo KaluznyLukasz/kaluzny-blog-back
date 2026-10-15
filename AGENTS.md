@@ -45,6 +45,11 @@ src/modules/<domain>/
   `application`; Nest turns them into the HTTP response, controllers need no try/catch.
 - Reads go through queries (`QueryBus`), changes go through commands (`CommandBus`). One query or command class, one handler.
   Classes extend `Query<Result>` / `Command<void>` from `@nestjs/cqrs`, so `execute()` is typed.
+- No mapper between model and response: the controller returns the `Article` that a query gives. The field docs
+  (`@ApiProperty`) live once on `Article`, and `ArticleResponse` is `PickType(Article, [...])` with the fields the API
+  exposes. Changing a field's type or docs on `Article` reaches Swagger and the controller types automatically. Renaming
+  or removing a field is a compile error at the `PickType` list, so the response cannot drift from the model. The JSON
+  contains every property of the object, so do not put private data on `Article`.
 - A command never returns data. The controller runs the command, then a query, and answers with the query result. So the
   controller generates the ID of a new article (`randomUUID()`) and passes it in `CreateArticleCommand`, which lets it read
   the article back with `GetArticleByIdQuery`.

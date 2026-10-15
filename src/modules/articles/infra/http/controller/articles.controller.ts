@@ -39,10 +39,7 @@ import {
   rulesBrokenExample,
   serverOwnedFieldExample,
 } from '../response/articles.examples';
-import {
-  ArticleResponse,
-  toArticleResponse,
-} from '../response/articles.response';
+import { ArticleResponse } from '../response/articles.response';
 
 const articleIdParam = ApiParam({
   name: 'id',
@@ -79,10 +76,8 @@ export class ArticlesController {
     type: ArticleResponse,
     isArray: true,
   })
-  async getAll(): Promise<ArticleResponse[]> {
-    const articles = await this.queryBus.execute(new GetAllArticlesQuery());
-
-    return articles.map(toArticleResponse);
+  getAll(): Promise<ArticleResponse[]> {
+    return this.queryBus.execute(new GetAllArticlesQuery());
   }
 
   @Get(':id')
@@ -94,10 +89,8 @@ export class ArticlesController {
   })
   @invalidIdResponse
   @articleNotFoundResponse
-  async getById(@UuidParam('id') id: string): Promise<ArticleResponse> {
-    const article = await this.queryBus.execute(new GetArticleByIdQuery(id));
-
-    return toArticleResponse(article);
+  getById(@UuidParam('id') id: string): Promise<ArticleResponse> {
+    return this.queryBus.execute(new GetArticleByIdQuery(id));
   }
 
   @Post()
@@ -125,9 +118,8 @@ export class ArticlesController {
     await this.commandBus.execute(
       new CreateArticleCommand(id, request.title, request.content),
     );
-    const article = await this.queryBus.execute(new GetArticleByIdQuery(id));
 
-    return toArticleResponse(article);
+    return this.queryBus.execute(new GetArticleByIdQuery(id));
   }
 
   @Patch(':id')
@@ -159,9 +151,8 @@ export class ArticlesController {
     await this.commandBus.execute(
       new UpdateArticleCommand(id, request.title, request.content),
     );
-    const article = await this.queryBus.execute(new GetArticleByIdQuery(id));
 
-    return toArticleResponse(article);
+    return this.queryBus.execute(new GetArticleByIdQuery(id));
   }
 
   @Delete(':id')
