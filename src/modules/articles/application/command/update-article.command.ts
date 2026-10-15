@@ -1,7 +1,6 @@
 import { Command } from '@nestjs/cqrs';
-import { Article } from '../../model/article.model';
 
-export class UpdateArticleCommand extends Command<Article> {
+export class UpdateArticleCommand extends Command<void> {
   constructor(
     readonly id: string,
     readonly title?: string,

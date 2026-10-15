@@ -44,7 +44,10 @@ src/modules/<domain>/
 - Domain errors extend Nest HTTP exceptions (for example `ArticleNotFoundError extends NotFoundException`) and are thrown in
   `application`; Nest turns them into the HTTP response, controllers need no try/catch.
 - Reads go through queries (`QueryBus`), changes go through commands (`CommandBus`). One query or command class, one handler.
-  Classes extend `Query<Result>` / `Command<Result>` from `@nestjs/cqrs`, so `execute()` is typed.
+  Classes extend `Query<Result>` / `Command<void>` from `@nestjs/cqrs`, so `execute()` is typed.
+- A command never returns data. The controller runs the command, then a query, and answers with the query result. So the
+  controller generates the ID of a new article (`randomUUID()`) and passes it in `CreateArticleCommand`, which lets it read
+  the article back with `GetArticleByIdQuery`.
 - Admin-only endpoints use `@AdminOnly()` (`src/core/http/auth/admin-only.decorator.ts`): `AdminGuard` + Swagger bearer scheme
   `access-token` + the 401 and 403 responses. Guards run before pipes, so a request without a token gets 401 whatever its body
   or ID looks like.
@@ -129,6 +132,6 @@ All three need `Authorization: Bearer <ADMIN_TOKEN>`. Reading stays open.
 - Responses: 401 no token, 403 wrong token, 400 invalid body or ID, 404 unknown ID. Order of checks: token, then ID and body, then
   the database.
 - Update uses `@ValidateIf` (not `@IsOptional`) for optional fields: `@IsOptional` would let `null` through to the database.
-- The repository turns Prisma's `P2025` (record not found) into `null`, so the handler answers 404 even if the article is deleted
-  between two requests.
+- The repository turns Prisma's `P2025` (record not found) into `false`, so the handler answers 404 even if the article is deleted
+  between two requests. If it is deleted between the command and the query that follows, the query answers 404.
 - The front end comes in blog-section (#107).

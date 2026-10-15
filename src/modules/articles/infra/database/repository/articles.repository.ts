@@ -26,8 +26,8 @@ export class ArticlesRepository {
     return row ? toArticle(row) : null;
   }
 
-  async create(article: Article): Promise<Article> {
-    const row = await this.prisma.article.create({
+  async create(article: Article): Promise<void> {
+    await this.prisma.article.create({
       data: {
         id: article.id,
         title: article.title,
@@ -35,27 +35,22 @@ export class ArticlesRepository {
         publishedAt: article.publishedAt,
       },
     });
-
-    return toArticle(row);
   }
 
   async update(
     id: string,
     changes: { title?: string; content?: string },
-  ): Promise<Article | null> {
+  ): Promise<boolean> {
     try {
-      const row = await this.prisma.article.update({
-        where: { id },
-        data: changes,
-      });
+      await this.prisma.article.update({ where: { id }, data: changes });
 
-      return toArticle(row);
+      return true;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === RECORD_NOT_FOUND
       ) {
-        return null;
+        return false;
       }
 
       throw error;

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import {
   Body,
   Controller,
@@ -119,9 +120,12 @@ export class ArticlesController {
   async create(
     @Body() request: CreateArticleRequest,
   ): Promise<ArticleResponse> {
-    const article = await this.commandBus.execute(
-      new CreateArticleCommand(request.title, request.content),
+    const id = randomUUID();
+
+    await this.commandBus.execute(
+      new CreateArticleCommand(id, request.title, request.content),
     );
+    const article = await this.queryBus.execute(new GetArticleByIdQuery(id));
 
     return toArticleResponse(article);
   }
@@ -152,9 +156,10 @@ export class ArticlesController {
     @UuidParam('id') id: string,
     @Body() request: UpdateArticleRequest,
   ): Promise<ArticleResponse> {
-    const article = await this.commandBus.execute(
+    await this.commandBus.execute(
       new UpdateArticleCommand(id, request.title, request.content),
     );
+    const article = await this.queryBus.execute(new GetArticleByIdQuery(id));
 
     return toArticleResponse(article);
   }

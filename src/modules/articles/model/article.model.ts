@@ -1,5 +1,3 @@
-import { randomUUID } from 'crypto';
-
 export class Article {
   constructor(
     readonly id: string,
@@ -8,7 +6,7 @@ export class Article {
     readonly publishedAt: Date,
   ) {}
 
-  static publish(title: string, content: string): Article {
-    return new Article(randomUUID(), title, content, new Date());
+  static publish(id: string, title: string, content: string): Article {
+    return new Article(id, title, content, new Date());
   }
 }

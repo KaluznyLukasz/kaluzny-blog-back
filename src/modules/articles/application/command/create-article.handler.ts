@@ -7,9 +7,9 @@ import { CreateArticleCommand } from './create-article.command';
 export class CreateArticleHandler implements ICommandHandler<CreateArticleCommand> {
   constructor(private readonly articlesRepository: ArticlesRepository) {}
 
-  execute(command: CreateArticleCommand): Promise<Article> {
-    return this.articlesRepository.create(
-      Article.publish(command.title, command.content),
+  async execute(command: CreateArticleCommand): Promise<void> {
+    await this.articlesRepository.create(
+      Article.publish(command.id, command.title, command.content),
     );
   }
 }
