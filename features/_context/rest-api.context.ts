@@ -9,8 +9,26 @@ const httpAgent = new Agent({ keepAlive: false });
 let apiToken: string | null = null;
 let apiResponse: AxiosResponse;
 
+function authorizationHeader() {
+  return apiToken === null ? {} : { Authorization: `Bearer ${apiToken}` };
+}
+
+function expandCharacters(body: string) {
+  return body.replace(/@characters\((\d+)\)/g, (_, count) =>
+    'a'.repeat(Number(count)),
+  );
+}
+
 Given('I use admin token', async () => {
   apiToken = 'admin-token';
+});
+
+Given('I use no token', () => {
+  apiToken = null;
+});
+
+Given('I use a wrong token', () => {
+  apiToken = 'wrong-token';
 });
 
 Given('I use destructive actions token', async () => {
@@ -26,7 +44,7 @@ When(
       url: url,
       httpAgent,
       validateStatus: () => true,
-      headers: apiToken === '' ? {} : { Authorization: `Bearer ${apiToken}` },
+      headers: authorizationHeader(),
     });
   },
 );
@@ -38,10 +56,10 @@ When(
     apiResponse = await axios.request({
       method: method,
       url: url,
-      data: JSON.parse(body),
+      data: JSON.parse(expandCharacters(body)),
       httpAgent,
       validateStatus: () => true,
-      headers: apiToken === '' ? {} : { Authorization: `Bearer ${apiToken}` },
+      headers: authorizationHeader(),
     });
   },
 );
@@ -75,6 +93,10 @@ Then(
 
 Then('the response body should have {int} items', (count: number) => {
   expect(apiResponse.data).toHaveLength(count);
+});
+
+Then('the response body should be empty', () => {
+  expect(apiResponse.data).toBe('');
 });
 
 Then('I dump response', () => {

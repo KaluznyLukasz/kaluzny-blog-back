@@ -41,6 +41,10 @@ You do not need Node.js on your machine. All `npm`, `npx` and `node` commands ru
     cp .env.dist .env
     ```
 
+    `.env.dist` holds development values only, including a development `ADMIN_TOKEN`. Anywhere else, use your own long
+    random value and never commit it. If you created `.env` before `ADMIN_TOKEN` existed, add the line to it and recreate
+    the app container with `docker compose up -d --force-recreate app`.
+
 3. Build and start the containers, and wait until both are healthy:
 
     ```shell
@@ -111,12 +115,20 @@ untouched and missing ones are created.
 
 ## API
 
-| Endpoint                   | Answers                                                                            |
-| -------------------------- | ---------------------------------------------------------------------------------- |
-| `GET /api/v1/articles`     | `200` all articles, newest first (an empty list when there are none)               |
-| `GET /api/v1/articles/:id` | `200` the article, `400` when the ID is not a valid UUID, `404` when it is unknown |
+| Endpoint                      | Admin token | Answers                                                                                      |
+| ----------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `GET /api/v1/articles`        | no          | `200` all articles, newest first (an empty list when there are none)                         |
+| `GET /api/v1/articles/:id`    | no          | `200` the article, `400` when the ID is not a valid UUID, `404` when it is unknown           |
+| `POST /api/v1/articles`       | yes         | `201` the new article, `400` for invalid data                                                |
+| `PATCH /api/v1/articles/:id`  | yes         | `200` the changed article, `400` for an invalid ID or invalid data, `404` when it is unknown |
+| `DELETE /api/v1/articles/:id` | yes         | `204` without a body, `400` for an invalid ID, `404` when it is unknown                      |
 
-Every endpoint and response code is documented in Swagger at http://localhost/api.
+Writing needs the header `Authorization: Bearer <ADMIN_TOKEN>`: `401` without a token, `403` with a wrong one. The API sets
+the `id` and the `publishedAt` of an article itself, sending them (or any unknown field) is a `400`. A title has 3 to 255
+characters and a text 10 to 20000 characters.
+
+Every endpoint and response code is documented in Swagger at http://localhost/api. Click **Authorize**, paste the admin
+token (without the word `Bearer`) and you can create, edit and delete articles from there.
 
 ## Versioning and releases
 

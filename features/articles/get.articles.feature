@@ -1,5 +1,11 @@
 Feature: As a visitor of the about me page I want to read one blog article
 
+  Scenario: As a visitor without a token I still read an article
+    Given I use seed data
+    And I use no token
+    When I send a "GET" request to "/api/v1/articles/5e1f0a2b-0001-4000-8000-000000000001"
+    Then the response status should be 200
+
   Scenario: As a visitor I read an article by its ID
     Given I use seed data
     When I send a "GET" request to "/api/v1/articles/5e1f0a2b-0001-4000-8000-000000000001"
