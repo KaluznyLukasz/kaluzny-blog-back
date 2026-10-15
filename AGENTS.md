@@ -30,7 +30,9 @@ Follows the company structure convention (`src/core`, `src/modules`, nothing els
 
 ```
 src/modules/<domain>/
-├── application/query/   queries and their handlers (CQRS), later also command/
+├── application/
+│   ├── command/         commands and their handlers (CQRS writes)
+│   └── query/           queries and their handlers (CQRS reads)
 ├── infra/
 │   ├── database/repository/
 │   └── http/{controller,request,response}/
@@ -41,10 +43,17 @@ src/modules/<domain>/
 - `application` talks to the database only through repositories from `infra`. It never touches HTTP.
 - Domain errors extend Nest HTTP exceptions (for example `ArticleNotFoundError extends NotFoundException`) and are thrown in
   `application`; Nest turns them into the HTTP response, controllers need no try/catch.
-- Reads go through queries (`@nestjs/cqrs`, `QueryBus`). One query class, one handler.
+- Reads go through queries (`QueryBus`), changes go through commands (`CommandBus`). One query or command class, one handler.
+  Classes extend `Query<Result>` / `Command<Result>` from `@nestjs/cqrs`, so `execute()` is typed.
+- Admin-only endpoints use `@AdminOnly()` (`src/core/http/auth/admin-only.decorator.ts`): `AdminGuard` + Swagger bearer scheme
+  `access-token` + the 401 and 403 responses. Guards run before pipes, so a request without a token gets 401 whatever its body
+  or ID looks like.
 - HTTP APIs keep a version in the path: `/api/v1/...`. Swagger UI is at `/api`, its JSON at `/api-json`.
 - Every endpoint documents every response code it can give in Swagger (`@ApiOkResponse`, `@ApiBadRequestResponse`,
   `@ApiNotFoundResponse`, ...). Generic error bodies live in `src/core/http/response/`.
+- The generic 400 and 404 classes carry template examples (`registration`, "Resource with given id…") that are wrong for a
+  specific endpoint. Give each endpoint real `examples` (see `infra/http/response/articles.examples.ts`) and keep them equal to
+  the real answers.
 
 ## Naming and style
 
@@ -68,12 +77,25 @@ src/modules/<domain>/
   fixed UUIDs + `upsert` with `update: {}`.
 - `ts-node` (seed, Cucumber) does not understand `src/...` imports. Anything they import uses relative imports.
 
+## Configuration and secrets
+
+- Settings come from the environment through `ConfigModule` (global, in `AppModule`) and `ConfigService`.
+- `.env.dist` is committed and holds development values only (`DATABASE_URL`, `ADMIN_TOKEN="admin-token"`). `.env` is git-ignored.
+  After a new setting lands in `.env.dist`, add it to your `.env` and recreate the container:
+  `docker compose up -d --force-recreate app` (`restart` does not re-read `.env`).
+- Never commit a real secret. Never write a token to a log or an error message.
+- No `ADMIN_TOKEN` set means nobody can write (every write gets 403), so a missing setting is safe.
+
 ## Tests
 
 - Cucumber steps live in `features/_context/` (HTTP steps in `rest-api.context.ts`, database steps in
   `database.context.ts`), helpers in `features/_helper/`.
 - `Given I use seed data` = `prisma migrate reset --force` + `prisma db seed`: the database holds exactly the seed data.
 - `Given I use an empty database` = `prisma migrate reset --force`.
+- Tokens: `Given I use admin token` (`admin-token`), `Given I use no token` (no `Authorization` header, this is also the default
+  after every scenario), `Given I use a wrong token`.
+- In a request body `@characters(N)` becomes N letters `a`, for length rules.
+- Scenarios that only fail before the database is touched (validation 400, 401, 403) skip `Given I use seed data` to save time.
 - The test HTTP client does not keep connections alive (`httpAgent` in `rest-api.context.ts`), otherwise slow
   database-reset steps cause `socket hang up`.
 - Seed articles (`prisma/seed/articles.seed.ts`) are used as expected data in scenarios. Change them and the features together.
@@ -91,4 +113,22 @@ src/modules/<domain>/
 - `GET /api/v1/articles`: 200, all articles, newest first (`publishedAt` desc, then `id` asc for ties). Empty list when none.
 - `GET /api/v1/articles/:id`: 200 article, 400 when `:id` is not a UUID v4, 404 when no such article.
 - An article: `id` (UUID), `title`, `content`, `publishedAt`. Same shape in the list and in the single response.
-- Writing articles comes in articles-write-api (#106), the front end in blog-section (#107).
+
+## Articles write API (articles-write-api, #106)
+
+All three need `Authorization: Bearer <ADMIN_TOKEN>`. Reading stays open.
+
+- `POST /api/v1/articles` body `{title, content}`: 201 with the new article. The API sets `id` (random UUID v4) and `publishedAt` (now).
+- `PATCH /api/v1/articles/:id` body with `title` and/or `content` (PATCH, so you send only what changes): 200 with the changed
+  article, `publishedAt` never changes. `{}` is allowed and changes nothing. `null` is rejected.
+- `DELETE /api/v1/articles/:id`: 204 without a body. Reading it afterwards gives 404.
+- Rules (`infra/http/request/articles.request.ts`, also in Swagger): `title` 3 to 255 characters, `content` 10 to 20000 characters,
+  both strings, spaces at the start and end are trimmed before the length check.
+- Unknown fields and the server-owned `id` and `publishedAt` give 400 (`whitelist` + `forbidNonWhitelisted` in the global
+  `ValidationPipe`). 400 bodies use the template's `violations` list.
+- Responses: 401 no token, 403 wrong token, 400 invalid body or ID, 404 unknown ID. Order of checks: token, then ID and body, then
+  the database.
+- Update uses `@ValidateIf` (not `@IsOptional`) for optional fields: `@IsOptional` would let `null` through to the database.
+- The repository turns Prisma's `P2025` (record not found) into `null`, so the handler answers 404 even if the article is deleted
+  between two requests.
+- The front end comes in blog-section (#107).
