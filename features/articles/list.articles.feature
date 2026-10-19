@@ -45,3 +45,10 @@ Feature: As a visitor of the about me page I want to see the list of blog articl
     When I send a "GET" request to "/api/v1/articles"
     Then the response status should be 200
     And the response body should have 5 items
+
+  Scenario: As a visitor without a token I still see the list of articles
+    Given I use seed data
+    And I use no token
+    When I send a "GET" request to "/api/v1/articles"
+    Then the response status should be 200
+    And the response body should have 5 items

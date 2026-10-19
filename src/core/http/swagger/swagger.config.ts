@@ -13,9 +13,9 @@ function createSwaggerConfig() {
       {
         type: 'http',
         scheme: 'bearer',
-        bearerFormat: 'JWT',
+        bearerFormat: 'opaque',
         description:
-          'Enter your JWT token in the format: **Bearer &lt;token&gt;**',
+          'Enter the admin token (the ADMIN_TOKEN setting). Swagger UI adds the **Bearer** prefix itself.',
       },
       'access-token',
     )
