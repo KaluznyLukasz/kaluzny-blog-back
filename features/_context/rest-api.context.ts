@@ -26,9 +26,13 @@ function authorizationHeader() {
   return apiToken === null ? {} : { Authorization: `Bearer ${apiToken}` };
 }
 
-// "@remembered" in a path stands for the value kept by "I remember the {string} of the response".
+// "@remembered" in a path or in a body stands for the value kept by "I remember the {string} of the response".
+function expandRemembered(text: string) {
+  return text.replaceAll('@remembered', rememberedValue ?? '@remembered');
+}
+
 function expandPath(path: string) {
-  return path.replace('@remembered', rememberedValue ?? '@remembered');
+  return expandRemembered(path);
 }
 
 function fixture(fileName: string) {
@@ -132,7 +136,7 @@ When(
     apiResponse = await axios.request({
       method: method,
       url: url,
-      data: JSON.parse(expandCharacters(body)),
+      data: JSON.parse(expandRemembered(expandCharacters(body))),
       httpAgent,
       validateStatus: () => true,
       headers: authorizationHeader(),
@@ -203,6 +207,13 @@ Then('the response body should contain:', async function (docString: string) {
 
   deepCompare(actual, expected);
 });
+
+Then(
+  'item {int} of the response body should contain:',
+  (position: number, docString: string) => {
+    deepCompare(apiResponse.data[position - 1], JSON.parse(docString));
+  },
+);
 
 Then(
   'the response body should list articles in this order:',

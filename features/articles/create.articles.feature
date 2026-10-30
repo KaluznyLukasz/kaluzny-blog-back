@@ -17,7 +17,9 @@ Feature: As the author of the blog I want to create articles through the API
         "id": "@uuid",
         "title": "My new article",
         "content": "The text of my new article.",
-        "publishedAt": "@date('within 1 minute from now')"
+        "publishedAt": "@date('within 1 minute from now')",
+        "imageId": null,
+        "imageUrl": null
       }
       """
     When I send a "GET" request to "/api/v1/articles"

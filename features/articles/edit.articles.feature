@@ -17,7 +17,9 @@ Feature: As the author of the blog I want to edit my articles through the API
         "id": "5e1f0a2b-0002-4000-8000-000000000002",
         "title": "Docker after a year",
         "content": "Containers are now my default way to run any project.",
-        "publishedAt": "2025-02-14T12:30:00.000Z"
+        "publishedAt": "2025-02-14T12:30:00.000Z",
+        "imageId": null,
+        "imageUrl": null
       }
       """
     When I send a "GET" request to "/api/v1/articles/5e1f0a2b-0002-4000-8000-000000000002"
@@ -28,7 +30,9 @@ Feature: As the author of the blog I want to edit my articles through the API
         "id": "5e1f0a2b-0002-4000-8000-000000000002",
         "title": "Docker after a year",
         "content": "Containers are now my default way to run any project.",
-        "publishedAt": "2025-02-14T12:30:00.000Z"
+        "publishedAt": "2025-02-14T12:30:00.000Z",
+        "imageId": null,
+        "imageUrl": null
       }
       """
 
@@ -48,7 +52,9 @@ Feature: As the author of the blog I want to edit my articles through the API
         "id": "5e1f0a2b-0002-4000-8000-000000000002",
         "title": "Docker after a year",
         "content": "Everything in this project runs in containers, including npm. It felt strange for a week and then I stopped caring about which Node.js version is on my laptop.",
-        "publishedAt": "2025-02-14T12:30:00.000Z"
+        "publishedAt": "2025-02-14T12:30:00.000Z",
+        "imageId": null,
+        "imageUrl": null
       }
       """
 
@@ -66,7 +72,9 @@ Feature: As the author of the blog I want to edit my articles through the API
         "id": "5e1f0a2b-0002-4000-8000-000000000002",
         "title": "My first month with Docker",
         "content": "Everything in this project runs in containers, including npm. It felt strange for a week and then I stopped caring about which Node.js version is on my laptop.",
-        "publishedAt": "2025-02-14T12:30:00.000Z"
+        "publishedAt": "2025-02-14T12:30:00.000Z",
+        "imageId": null,
+        "imageUrl": null
       }
       """
 
@@ -227,7 +235,9 @@ Feature: As the author of the blog I want to edit my articles through the API
         "id": "5e1f0a2b-0002-4000-8000-000000000002",
         "title": "My first month with Docker",
         "content": "Everything in this project runs in containers, including npm. It felt strange for a week and then I stopped caring about which Node.js version is on my laptop.",
-        "publishedAt": "2025-02-14T12:30:00.000Z"
+        "publishedAt": "2025-02-14T12:30:00.000Z",
+        "imageId": null,
+        "imageUrl": null
       }
       """
 
@@ -257,7 +267,9 @@ Feature: As the author of the blog I want to edit my articles through the API
         "id": "5e1f0a2b-0002-4000-8000-000000000002",
         "title": "My first month with Docker",
         "content": "Everything in this project runs in containers, including npm. It felt strange for a week and then I stopped caring about which Node.js version is on my laptop.",
-        "publishedAt": "2025-02-14T12:30:00.000Z"
+        "publishedAt": "2025-02-14T12:30:00.000Z",
+        "imageId": null,
+        "imageUrl": null
       }
       """
 
