@@ -5,19 +5,20 @@ import { images } from './images.seed';
 const prisma = new PrismaService();
 
 export async function main() {
-  for (const article of articles) {
-    await prisma.article.upsert({
-      where: { id: article.id },
-      update: {},
-      create: article,
-    });
-  }
-
+  // images first: an article can point to one
   for (const image of images) {
     await prisma.image.upsert({
       where: { id: image.id },
       update: {},
       create: image,
+    });
+  }
+
+  for (const article of articles) {
+    await prisma.article.upsert({
+      where: { id: article.id },
+      update: {},
+      create: article,
     });
   }
 }

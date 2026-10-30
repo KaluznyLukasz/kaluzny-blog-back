@@ -1,7 +1,13 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, TransformFnParams } from 'class-transformer';
-import { IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 const TITLE_MIN_LENGTH = 3;
 const TITLE_MAX_LENGTH = 255;
@@ -22,12 +28,26 @@ const contentDocs = {
   example: 'I want a place to write down what I learn while building software.',
 };
 
+const imageIdDocs = {
+  description:
+    'ID of the cover image, a UUID v4 of an image uploaded with POST /api/v1/images. Send null for no cover image.',
+  type: String,
+  format: 'uuid',
+  nullable: true,
+  example: '1ae9e000-0001-4000-8000-000000000001',
+};
+
 function trim({ value }: TransformFnParams) {
   return typeof value === 'string' ? value.trim() : value;
 }
 
 function isSent(_object: unknown, value: unknown) {
   return value !== undefined;
+}
+
+// null is a real answer for the cover image: it means "no image"
+function isImageSet(_object: unknown, value: unknown) {
+  return value !== undefined && value !== null;
 }
 
 function TitleRules() {
@@ -56,6 +76,11 @@ export class CreateArticleRequest {
   @ApiProperty(contentDocs)
   @ContentRules()
   content: string;
+
+  @ApiPropertyOptional(imageIdDocs)
+  @ValidateIf(isImageSet)
+  @IsUUID('4')
+  imageId?: string | null;
 }
 
 export class UpdateArticleRequest {
@@ -68,4 +93,9 @@ export class UpdateArticleRequest {
   @ValidateIf(isSent)
   @ContentRules()
   content?: string;
+
+  @ApiPropertyOptional(imageIdDocs)
+  @ValidateIf(isImageSet)
+  @IsUUID('4')
+  imageId?: string | null;
 }

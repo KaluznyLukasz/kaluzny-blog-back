@@ -29,14 +29,36 @@ export class Article {
   })
   readonly publishedAt: Date;
 
-  constructor(id: string, title: string, content: string, publishedAt: Date) {
+  @ApiProperty({
+    description:
+      'ID of the cover image of the article (an image uploaded with POST /api/v1/images), null when the article has none',
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    example: '1ae9e000-0001-4000-8000-000000000001',
+  })
+  readonly imageId: string | null;
+
+  constructor(
+    id: string,
+    title: string,
+    content: string,
+    publishedAt: Date,
+    imageId: string | null,
+  ) {
     this.id = id;
     this.title = title;
     this.content = content;
     this.publishedAt = publishedAt;
+    this.imageId = imageId;
   }
 
-  static publish(id: string, title: string, content: string): Article {
-    return new Article(id, title, content, new Date());
+  static publish(
+    id: string,
+    title: string,
+    content: string,
+    imageId: string | null,
+  ): Article {
+    return new Article(id, title, content, new Date(), imageId);
   }
 }

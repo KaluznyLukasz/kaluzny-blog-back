@@ -20,6 +20,32 @@ export const rulesBrokenExample = {
   },
 };
 
+export const invalidImageIdExample = {
+  summary: 'The ID of the cover image is not a valid UUID v4',
+  value: {
+    statusCode: 400,
+    message: 'Request validation failed.',
+    error: 'Bad Request',
+    violations: {
+      imageId: ['imageId must be a UUID'],
+    },
+  },
+};
+
+export const unknownImageExample = {
+  summary: 'There is no image with the ID sent as the cover image',
+  value: {
+    statusCode: 400,
+    message: 'Request validation failed.',
+    error: 'Bad Request',
+    violations: {
+      imageId: [
+        'Image with id 1ae9e000-0001-4000-8000-0000000000ff does not exist.',
+      ],
+    },
+  },
+};
+
 export const serverOwnedFieldExample = {
   summary: 'A field owned by the server or an unknown field was sent',
   value: {

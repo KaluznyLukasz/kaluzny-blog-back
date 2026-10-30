@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PublicUrlModule } from '../../core/http/public-url/public-url.module';
 import { PrismaModule } from '../../core/prisma/prisma.module';
 import { CreateArticleHandler } from './application/command/create-article.handler';
 import { DeleteArticleHandler } from './application/command/delete-article.handler';
@@ -9,7 +10,7 @@ import { ArticlesRepository } from './infra/database/repository/articles.reposit
 import { ArticlesController } from './infra/http/controller/articles.controller';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, PublicUrlModule],
   controllers: [ArticlesController],
   providers: [
     ArticlesRepository,

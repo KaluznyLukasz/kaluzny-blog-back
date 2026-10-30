@@ -12,7 +12,6 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -32,6 +31,7 @@ import {
 import { Response } from 'express';
 import { AdminOnly } from '../../../../../core/http/auth/admin-only.decorator';
 import { GenericBadRequestResponse } from '../../../../../core/http/response/bad-request.response';
+import { PublicUrl } from '../../../../../core/http/public-url/public-url.service';
 import { GenericNotFoundResponse } from '../../../../../core/http/response/not-found.response';
 import { PayloadTooLargeResponse } from '../../../../../core/http/response/payload-too-large.response';
 import { UnsupportedMediaTypeResponse } from '../../../../../core/http/response/unsupported-media-type.response';
@@ -43,6 +43,7 @@ import { GetImageByIdQuery } from '../../../application/query/get-image-by-id.qu
 import { GetImageFileByIdQuery } from '../../../application/query/get-image-file-by-id.query';
 import { IMAGE_CONTENT_TYPES } from '../../../model/image-content-type';
 import { Image, MAX_IMAGE_SIZE } from '../../../model/image.model';
+import { IMAGES_PATH } from '../images.path';
 import { UploadImageRequest } from '../request/images.request';
 import {
   fileMissingExample,
@@ -54,8 +55,6 @@ import {
   wrongFieldExample,
 } from '../response/images.examples';
 import { ImageResponse } from '../response/images.response';
-
-const IMAGES_PATH = 'api/v1/images';
 
 // An image never changes (there is no update, only upload and delete), so it can be kept for as long as browsers allow.
 const IMAGE_FILE_HEADERS = {
@@ -85,17 +84,11 @@ const invalidIdResponse = ApiBadRequestResponse({
 @ApiTags('images')
 @Controller(IMAGES_PATH)
 export class ImagesController {
-  private readonly publicUrl: string;
-
   constructor(
     private readonly queryBus: QueryBus,
     private readonly commandBus: CommandBus,
-    configService: ConfigService,
-  ) {
-    this.publicUrl = configService
-      .get<string>('PUBLIC_URL', '')
-      .replace(/\/+$/, '');
-  }
+    private readonly publicUrl: PublicUrl,
+  ) {}
 
   @Get()
   @AdminOnly()
@@ -217,6 +210,6 @@ export class ImagesController {
 
   // The address depends on where the API is published (PUBLIC_URL), which the model does not know, so it is added here.
   private toResponse(image: Image): ImageResponse {
-    return { ...image, url: `${this.publicUrl}/${IMAGES_PATH}/${image.id}` };
+    return { ...image, url: this.publicUrl.to(`${IMAGES_PATH}/${image.id}`) };
   }
 }

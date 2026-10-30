@@ -1,4 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { ArticleImageNotFoundError } from '../../model/article-image-not-found.error';
 import { ArticleNotFoundError } from '../../model/article-not-found.error';
 import { ArticlesRepository } from '../../infra/database/repository/articles.repository';
 import { UpdateArticleCommand } from './update-article.command';
@@ -8,13 +9,18 @@ export class UpdateArticleHandler implements ICommandHandler<UpdateArticleComman
   constructor(private readonly articlesRepository: ArticlesRepository) {}
 
   async execute(command: UpdateArticleCommand): Promise<void> {
-    const updated = await this.articlesRepository.update(command.id, {
+    const result = await this.articlesRepository.update(command.id, {
       title: command.title,
       content: command.content,
+      imageId: command.imageId,
     });
 
-    if (!updated) {
+    if (result === 'article-not-found') {
       throw new ArticleNotFoundError(command.id);
+    }
+
+    if (result === 'image-not-found') {
+      throw new ArticleImageNotFoundError(command.imageId);
     }
   }
 }

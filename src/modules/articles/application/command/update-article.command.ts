@@ -5,6 +5,8 @@ export class UpdateArticleCommand extends Command<void> {
     readonly id: string,
     readonly title?: string,
     readonly content?: string,
+    // undefined leaves the cover image as it is, null removes it
+    readonly imageId?: string | null,
   ) {
     super();
   }
