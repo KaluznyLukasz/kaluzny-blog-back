@@ -42,8 +42,9 @@ You do not need Node.js on your machine. All `npm`, `npx` and `node` commands ru
     ```
 
     `.env.dist` holds development values only, including a development `ADMIN_TOKEN`. Anywhere else, use your own long
-    random value and never commit it. If you created `.env` before `ADMIN_TOKEN` existed, add the line to it and recreate
-    the app container with `docker compose up -d --force-recreate app`.
+    random value and never commit it. `PUBLIC_URL` is the address the API is published at (no trailing slash): the
+    addresses of uploaded images start with it. If you created `.env` before `ADMIN_TOKEN` or `PUBLIC_URL` existed, add
+    the line to it and recreate the app container with `docker compose up -d --force-recreate app`.
 
 3. Build and start the containers, and wait until both are healthy:
 
@@ -129,6 +130,33 @@ characters and a text 10 to 20000 characters.
 
 Every endpoint and response code is documented in Swagger at http://localhost/api. Click **Authorize**, paste the admin
 token (without the word `Bearer`) and you can create, edit and delete articles from there.
+
+### Images
+
+| Endpoint                    | Admin token | Answers                                                                                                                  |
+| --------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `POST /api/v1/images`       | yes         | `201` the image with its `url`, `400` no file or a wrong form, `413` over 5 MB, `415` not a JPEG, PNG, GIF or WebP image |
+| `GET /api/v1/images`        | yes         | `200` all images, newest first, with the `url` of each (an empty list when there are none)                               |
+| `GET /api/v1/images/:id`    | no          | `200` the image file itself, `400` when the ID is not a valid UUID, `404` when it is unknown                             |
+| `DELETE /api/v1/images/:id` | yes         | `204` without a body, `400` for an invalid ID, `404` when it is unknown                                                  |
+
+To upload an image:
+
+1. Open http://localhost/api, click **Authorize** and paste the admin token.
+2. Open `POST /api/v1/images`, click **Try it out**, choose the file and click **Execute**.
+3. Copy the `url` from the answer: it is the address of the image.
+
+Anyone who has the address can open the image (it is the `src` of an `img` tag, no token needed). Without Swagger:
+
+```shell
+# curl, not an npm command, so it runs on your machine
+curl -H "Authorization: Bearer $ADMIN_TOKEN" -F "file=@picture.png" http://localhost/api/v1/images
+```
+
+The type of an image is read from the content of the file, never from its name, so a text file renamed to `.png` is
+refused with `415`. SVG is refused too, because it can carry a script. Images are stored in the database (a `bytea`
+column), so one backup covers articles and images. They never change: browsers may keep an image for a year. Deleting an
+image that an article still points to leaves a broken image in that article.
 
 ## Versioning and releases
 
