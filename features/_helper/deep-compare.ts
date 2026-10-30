@@ -13,6 +13,15 @@ export const deepCompare = (actual: any, expected: any) => {
     return;
   }
 
+  // "@image_url" is the address of any image, "@image_url(<id>)" the address of the image with this ID
+  const imageUrl =
+    typeof expected === 'string' && expected.match(/^@image_url(?:\((.+)\))?$/);
+
+  if (imageUrl) {
+    validateImageUrl(actual, imageUrl[1]);
+    return;
+  }
+
   if (expected === "@date('within 1 minute from now')") {
     const actualDate = new Date(actual);
     const now = new Date();
@@ -46,6 +55,22 @@ export const deepCompare = (actual: any, expected: any) => {
     deepCompare(actual[key], expected[key]);
   }
 };
+
+// The app and the scenarios run in the same container, so both see the same PUBLIC_URL
+function validateImageUrl(actual: any, id?: string) {
+  const prefix = `${(process.env.PUBLIC_URL ?? '').replace(/\/+$/, '')}/api/v1/images/`;
+
+  expect(typeof actual).toBe('string');
+  expect(actual.startsWith(prefix)).toBe(true);
+
+  const actualId = actual.slice(prefix.length);
+
+  if (id) {
+    expect(actualId).toBe(id);
+  } else {
+    expect(isUuid(actualId)).toBe(true);
+  }
+}
 
 function validateCurrentAppVersion(actual: any) {
   expect(typeof actual).toBe('string');

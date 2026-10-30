@@ -21,14 +21,17 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AdminOnly } from '../../../../../core/http/auth/admin-only.decorator';
+import { PublicUrl } from '../../../../../core/http/public-url/public-url.service';
 import { GenericBadRequestResponse } from '../../../../../core/http/response/bad-request.response';
 import { GenericNotFoundResponse } from '../../../../../core/http/response/not-found.response';
 import { UuidParam } from '../../../../../core/validation/decorator/uuid-v4-param.decorator';
+import { IMAGES_PATH } from '../../../../images/infra/http/images.path';
 import { CreateArticleCommand } from '../../../application/command/create-article.command';
 import { DeleteArticleCommand } from '../../../application/command/delete-article.command';
 import { UpdateArticleCommand } from '../../../application/command/update-article.command';
 import { GetAllArticlesQuery } from '../../../application/query/get-all-articles.query';
 import { GetArticleByIdQuery } from '../../../application/query/get-article-by-id.query';
+import { Article } from '../../../model/article.model';
 import {
   CreateArticleRequest,
   UpdateArticleRequest,
@@ -36,8 +39,10 @@ import {
 import {
   articleNotFoundExample,
   invalidIdExample,
+  invalidImageIdExample,
   rulesBrokenExample,
   serverOwnedFieldExample,
+  unknownImageExample,
 } from '../response/articles.examples';
 import { ArticleResponse } from '../response/articles.response';
 
@@ -66,6 +71,7 @@ export class ArticlesController {
   constructor(
     private readonly queryBus: QueryBus,
     private readonly commandBus: CommandBus,
+    private readonly publicUrl: PublicUrl,
   ) {}
 
   @Get()
@@ -76,8 +82,10 @@ export class ArticlesController {
     type: ArticleResponse,
     isArray: true,
   })
-  getAll(): Promise<ArticleResponse[]> {
-    return this.queryBus.execute(new GetAllArticlesQuery());
+  async getAll(): Promise<ArticleResponse[]> {
+    const articles = await this.queryBus.execute(new GetAllArticlesQuery());
+
+    return articles.map((article) => this.toResponse(article));
   }
 
   @Get(':id')
@@ -89,8 +97,10 @@ export class ArticlesController {
   })
   @invalidIdResponse
   @articleNotFoundResponse
-  getById(@UuidParam('id') id: string): Promise<ArticleResponse> {
-    return this.queryBus.execute(new GetArticleByIdQuery(id));
+  async getById(@UuidParam('id') id: string): Promise<ArticleResponse> {
+    return this.toResponse(
+      await this.queryBus.execute(new GetArticleByIdQuery(id)),
+    );
   }
 
   @Post()
@@ -103,11 +113,13 @@ export class ArticlesController {
   })
   @ApiBadRequestResponse({
     description:
-      'The data breaks a rule, has unknown fields or has fields owned by the server (id, publishedAt). Every wrong field is listed in violations.',
+      'The data breaks a rule, has unknown fields or has fields owned by the server (id, publishedAt), or the cover image does not exist. Every wrong field is listed in violations.',
     type: GenericBadRequestResponse,
     examples: {
       rulesBroken: rulesBrokenExample,
       serverOwnedField: serverOwnedFieldExample,
+      invalidImageId: invalidImageIdExample,
+      unknownImage: unknownImageExample,
     },
   })
   async create(
@@ -116,10 +128,17 @@ export class ArticlesController {
     const id = randomUUID();
 
     await this.commandBus.execute(
-      new CreateArticleCommand(id, request.title, request.content),
+      new CreateArticleCommand(
+        id,
+        request.title,
+        request.content,
+        request.imageId ?? null,
+      ),
     );
 
-    return this.queryBus.execute(new GetArticleByIdQuery(id));
+    return this.toResponse(
+      await this.queryBus.execute(new GetArticleByIdQuery(id)),
+    );
   }
 
   @Patch(':id')
@@ -135,12 +154,14 @@ export class ArticlesController {
   })
   @ApiBadRequestResponse({
     description:
-      'The ID is not a valid UUID v4, or the data breaks a rule, has unknown fields or has fields owned by the server (id, publishedAt). Every wrong field is listed in violations.',
+      'The ID is not a valid UUID v4, or the data breaks a rule, has unknown fields or has fields owned by the server (id, publishedAt), or the cover image does not exist. Every wrong field is listed in violations.',
     type: GenericBadRequestResponse,
     examples: {
       invalidId: invalidIdExample,
       rulesBroken: rulesBrokenExample,
       serverOwnedField: serverOwnedFieldExample,
+      invalidImageId: invalidImageIdExample,
+      unknownImage: unknownImageExample,
     },
   })
   @articleNotFoundResponse
@@ -149,10 +170,17 @@ export class ArticlesController {
     @Body() request: UpdateArticleRequest,
   ): Promise<ArticleResponse> {
     await this.commandBus.execute(
-      new UpdateArticleCommand(id, request.title, request.content),
+      new UpdateArticleCommand(
+        id,
+        request.title,
+        request.content,
+        request.imageId,
+      ),
     );
 
-    return this.queryBus.execute(new GetArticleByIdQuery(id));
+    return this.toResponse(
+      await this.queryBus.execute(new GetArticleByIdQuery(id)),
+    );
   }
 
   @Delete(':id')
@@ -165,5 +193,16 @@ export class ArticlesController {
   @articleNotFoundResponse
   async remove(@UuidParam('id') id: string): Promise<void> {
     await this.commandBus.execute(new DeleteArticleCommand(id));
+  }
+
+  // The address of the cover image depends on where the API is published (PUBLIC_URL), which the model does not know, so
+  // it is added here.
+  private toResponse(article: Article): ArticleResponse {
+    return {
+      ...article,
+      imageUrl: article.imageId
+        ? this.publicUrl.to(`${IMAGES_PATH}/${article.imageId}`)
+        : null,
+    };
   }
 }

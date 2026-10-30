@@ -14,7 +14,22 @@ model Article {
   title       String   @db.VarChar(255)
   content     String
   publishedAt DateTime @map("published_at")
+  imageId     String?  @map("image_id") @db.Uuid
+  image       Image?   @relation(fields: [imageId], references: [id], onDelete: SetNull)
 
   @@index([publishedAt(sort: Desc), id])
+  @@index([imageId])
   @@map("articles")
+}
+
+model Image {
+  id          String    @id @default(uuid()) @db.Uuid
+  contentType String    @map("content_type") @db.VarChar(50)
+  size        Int
+  data        Bytes
+  uploadedAt  DateTime  @map("uploaded_at")
+  articles    Article[]
+
+  @@index([uploadedAt(sort: Desc), id])
+  @@map("images")
 }

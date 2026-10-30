@@ -16,7 +16,9 @@ Feature: As a visitor of the about me page I want to read one blog article
         "id": "5e1f0a2b-0001-4000-8000-000000000001",
         "title": "Hello, world: why I started this blog",
         "content": "I want a place to write down what I learn while building software. Notes are easier to remember when someone else could read them, so this blog is my notebook made public.",
-        "publishedAt": "2025-01-10T09:00:00.000Z"
+        "publishedAt": "2025-01-10T09:00:00.000Z",
+        "imageId": "1ae9e000-0001-4000-8000-000000000001",
+        "imageUrl": "@image_url(1ae9e000-0001-4000-8000-000000000001)"
       }
       """
 

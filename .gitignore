@@ -7,3 +7,7 @@
 
 /.env
 /.eslintcache
+
+# pictures for articles: dropped here by the author, uploaded through the API when an article needs one
+/article-images/*
+!/article-images/.gitkeep

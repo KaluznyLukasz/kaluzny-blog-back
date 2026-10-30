@@ -7,6 +7,9 @@ import { PrismaService } from '../../../../../core/prisma/prisma.service';
 import { Article } from '../../../model/article.model';
 
 const RECORD_NOT_FOUND = 'P2025';
+const FOREIGN_KEY_VIOLATION = 'P2003';
+
+export type UpdateResult = 'updated' | 'article-not-found' | 'image-not-found';
 
 @Injectable()
 export class ArticlesRepository {
@@ -26,31 +29,44 @@ export class ArticlesRepository {
     return row ? toArticle(row) : null;
   }
 
-  async create(article: Article): Promise<void> {
-    await this.prisma.article.create({
-      data: {
-        id: article.id,
-        title: article.title,
-        content: article.content,
-        publishedAt: article.publishedAt,
-      },
-    });
+  // false when the cover image does not exist (also when it is deleted just before the article is saved)
+  async create(article: Article): Promise<boolean> {
+    try {
+      await this.prisma.article.create({
+        data: {
+          id: article.id,
+          title: article.title,
+          content: article.content,
+          publishedAt: article.publishedAt,
+          imageId: article.imageId,
+        },
+      });
+
+      return true;
+    } catch (error) {
+      if (isKnownError(error, FOREIGN_KEY_VIOLATION)) {
+        return false;
+      }
+
+      throw error;
+    }
   }
 
   async update(
     id: string,
-    changes: { title?: string; content?: string },
-  ): Promise<boolean> {
+    changes: { title?: string; content?: string; imageId?: string | null },
+  ): Promise<UpdateResult> {
     try {
       await this.prisma.article.update({ where: { id }, data: changes });
 
-      return true;
+      return 'updated';
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === RECORD_NOT_FOUND
-      ) {
-        return false;
+      if (isKnownError(error, RECORD_NOT_FOUND)) {
+        return 'article-not-found';
+      }
+
+      if (isKnownError(error, FOREIGN_KEY_VIOLATION)) {
+        return 'image-not-found';
       }
 
       throw error;
@@ -64,6 +80,18 @@ export class ArticlesRepository {
   }
 }
 
+function isKnownError(error: unknown, code: string): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
+  );
+}
+
 function toArticle(row: ArticleRow): Article {
-  return new Article(row.id, row.title, row.content, row.publishedAt);
+  return new Article(
+    row.id,
+    row.title,
+    row.content,
+    row.publishedAt,
+    row.imageId,
+  );
 }
