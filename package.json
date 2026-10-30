@@ -1,6 +1,6 @@
 {
   "name": "kaluzny-blog-back",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Back end of Łukasz Kałużny's blog",
   "author": "Łukasz Kałużny",
   "private": true,
@@ -48,6 +48,7 @@
     "@nestjs/testing": "^11.1.26",
     "@types/express": "^5.0.6",
     "@types/jest": "^29.5.14",
+    "@types/multer": "^2.3.0",
     "@types/node": "^20.19.43",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.0.0",

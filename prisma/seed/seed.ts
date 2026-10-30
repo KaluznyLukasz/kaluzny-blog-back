@@ -1,5 +1,6 @@
 import { PrismaService } from '../../src/core/prisma/prisma.service';
 import { articles } from './articles.seed';
+import { images } from './images.seed';
 
 const prisma = new PrismaService();
 
@@ -9,6 +10,14 @@ export async function main() {
       where: { id: article.id },
       update: {},
       create: article,
+    });
+  }
+
+  for (const image of images) {
+    await prisma.image.upsert({
+      where: { id: image.id },
+      update: {},
+      create: image,
     });
   }
 }

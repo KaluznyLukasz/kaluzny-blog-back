@@ -18,3 +18,14 @@ model Article {
   @@index([publishedAt(sort: Desc), id])
   @@map("articles")
 }
+
+model Image {
+  id          String   @id @default(uuid()) @db.Uuid
+  contentType String   @map("content_type") @db.VarChar(50)
+  size        Int
+  data        Bytes
+  uploadedAt  DateTime @map("uploaded_at")
+
+  @@index([uploadedAt(sort: Desc), id])
+  @@map("images")
+}
