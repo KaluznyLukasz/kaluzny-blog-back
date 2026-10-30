@@ -126,7 +126,8 @@ untouched and missing ones are created.
 
 Writing needs the header `Authorization: Bearer <ADMIN_TOKEN>`: `401` without a token, `403` with a wrong one. The API sets
 the `id` and the `publishedAt` of an article itself, sending them (or any unknown field) is a `400`. A title has 3 to 255
-characters and a text 10 to 20000 characters.
+characters and a text 10 to 20000 characters. An article can have a cover image: send the `imageId` of an uploaded image (see
+[Images](#images)). Every article answer has `imageId` and `imageUrl`, both `null` when there is no cover image.
 
 Every endpoint and response code is documented in Swagger at http://localhost/api. Click **Authorize**, paste the admin
 token (without the word `Bearer`) and you can create, edit and delete articles from there.
@@ -140,11 +141,13 @@ token (without the word `Bearer`) and you can create, edit and delete articles f
 | `GET /api/v1/images/:id`    | no          | `200` the image file itself, `400` when the ID is not a valid UUID, `404` when it is unknown                             |
 | `DELETE /api/v1/images/:id` | yes         | `204` without a body, `400` for an invalid ID, `404` when it is unknown                                                  |
 
-To upload an image:
+To give an article a cover image:
 
 1. Open http://localhost/api, click **Authorize** and paste the admin token.
-2. Open `POST /api/v1/images`, click **Try it out**, choose the file and click **Execute**.
-3. Copy the `url` from the answer: it is the address of the image.
+2. Open `POST /api/v1/images`, click **Try it out**, choose the file and click **Execute**. Copy the `id` from the answer (the
+   `url` is the address of the image file).
+3. Send that `id` as `imageId`: in `POST /api/v1/articles` for a new article, or in `PATCH /api/v1/articles/{id}` for an existing
+   one. The answer then has the `imageUrl` of the cover image. `"imageId": null` in a `PATCH` removes it.
 
 Anyone who has the address can open the image (it is the `src` of an `img` tag, no token needed). Without Swagger:
 
@@ -156,7 +159,7 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" -F "file=@picture.png" http://local
 The type of an image is read from the content of the file, never from its name, so a text file renamed to `.png` is
 refused with `415`. SVG is refused too, because it can carry a script. Images are stored in the database (a `bytea`
 column), so one backup covers articles and images. They never change: browsers may keep an image for a year. Deleting an
-image that an article still points to leaves a broken image in that article.
+image removes it as the cover image of its articles (they stay), and deleting an article keeps its image.
 
 ## Versioning and releases
 

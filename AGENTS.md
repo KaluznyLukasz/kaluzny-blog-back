@@ -129,32 +129,42 @@ src/modules/<domain>/
 
 - `GET /api/v1/articles`: 200, all articles, newest first (`publishedAt` desc, then `id` asc for ties). Empty list when none.
 - `GET /api/v1/articles/:id`: 200 article, 400 when `:id` is not a UUID v4, 404 when no such article.
-- An article: `id` (UUID), `title`, `content`, `publishedAt`. Same shape in the list and in the single response.
+- An article: `id` (UUID), `title`, `content`, `publishedAt`, `imageId` (cover image, UUID or `null`), `imageUrl` (address of the cover
+  image file or `null`). Same shape in the list and in the single response.
 
 ## Articles write API (articles-write-api, #106)
 
 All three need `Authorization: Bearer <ADMIN_TOKEN>`. Reading stays open.
 
-- `POST /api/v1/articles` body `{title, content}`: 201 with the new article. The API sets `id` (random UUID v4) and `publishedAt` (now).
-- `PATCH /api/v1/articles/:id` body with `title` and/or `content` (PATCH, so you send only what changes): 200 with the changed
-  article, `publishedAt` never changes. `{}` is allowed and changes nothing. `null` is rejected.
+- `POST /api/v1/articles` body `{title, content, imageId?}`: 201 with the new article. The API sets `id` (random UUID v4) and `publishedAt` (now).
+- `PATCH /api/v1/articles/:id` body with `title`, `content` and/or `imageId` (PATCH, so you send only what changes): 200 with the
+  changed article, `publishedAt` never changes. `{}` is allowed and changes nothing. `null` is rejected for `title` and `content`;
+  for `imageId` it is the way to remove the cover image.
 - `DELETE /api/v1/articles/:id`: 204 without a body. Reading it afterwards gives 404.
 - Rules (`infra/http/request/articles.request.ts`, also in Swagger): `title` 3 to 255 characters, `content` 10 to 20000 characters,
-  both strings, spaces at the start and end are trimmed before the length check.
+  both strings, spaces at the start and end are trimmed before the length check. `imageId` is a UUID v4 of an existing image or
+  `null` (`isImageSet` in the same file lets `null` through on purpose).
 - Unknown fields and the server-owned `id` and `publishedAt` give 400 (`whitelist` + `forbidNonWhitelisted` in the global
   `ValidationPipe`). 400 bodies use the template's `violations` list.
 - Responses: 401 no token, 403 wrong token, 400 invalid body or ID, 404 unknown ID. Order of checks: token, then ID and body, then
   the database.
 - Update uses `@ValidateIf` (not `@IsOptional`) for optional fields: `@IsOptional` would let `null` through to the database.
+- A cover image that does not exist is a 400 in the template's `violations` shape (`ArticleImageNotFoundError`, `violations.imageId`).
+  The repository turns Prisma's `P2003` (foreign key) into `false` / `'image-not-found'`, so this also holds if the image is deleted
+  just before the article is saved. The database does the rest: `articles.image_id` is a foreign key with `ON DELETE SET NULL`, so
+  deleting an image leaves its articles without a cover image, and deleting an article never deletes its image.
+- Deviation from "the controller returns the model": `ArticleResponse` has an `imageUrl`, built in the controller by `PublicUrl`
+  (`src/core/http/public-url`) from `PUBLIC_URL`, the same way as the `url` of an image. The seed article `…0001` has the first seed
+  image as its cover image, the others have none.
 - The repository turns Prisma's `P2025` (record not found) into `false`, so the handler answers 404 even if the article is deleted
   between two requests. If it is deleted between the command and the query that follows, the query answers 404.
 - The front end comes in blog-section (#107).
 
 ## Images module (images-upload-api)
 
-Images are separate from articles: the author uploads one and gets its `url`. The bytes live in Postgres (`images.data`,
-`bytea`), so no volume or object storage is needed. The front end shows an article's `content` as plain text (one `<p>` per
-line, no Markdown), so never put Markdown or an image address into `content` to get a picture on screen.
+Images are uploaded on their own and an article points to one as its cover image (`imageId`). The bytes live in Postgres
+(`images.data`, `bytea`), so no volume or object storage is needed. The front end shows an article's `content` as plain text (one
+`<p>` per line, no Markdown), so never put Markdown or an image address into `content` to get a picture on screen.
 
 - `POST /api/v1/images` (admin): `multipart/form-data`, field `file`. 201 `{id, contentType, size, uploadedAt, url}`. 400 no file /
   wrong field name / more than one file, 413 over 5 MB (`MAX_IMAGE_SIZE`), 415 not a JPEG, PNG, GIF or WebP.
@@ -166,14 +176,16 @@ line, no Markdown), so never put Markdown or an image address into `content` to 
   `Content-Type`; that type is what the file is served with. SVG is refused on purpose (it can carry a script).
 - `Image` holds metadata only. The bytes travel in `ImageFile`, which only the file download query returns, so they cannot
   reach a JSON answer.
-- Deviation from "the controller returns the model": `ImageResponse` has a `url`, built in the controller from `PUBLIC_URL` (see
-  `.env.dist`), because the address depends on where the API is published. With no `PUBLIC_URL` the `url` is a path only.
+- Deviation from "the controller returns the model": `ImageResponse` has a `url`, built in the controller by `PublicUrl` from
+  `PUBLIC_URL` (see `.env.dist`), because the address depends on where the API is published. With no `PUBLIC_URL` the `url` is a
+  path only.
 - `article-images/` is where the author drops pictures. Its content is git-ignored and not sent to Docker builds (only
   `.gitkeep` is tracked); inside the container it is `/app/article-images`. When asked to write an article with a picture from
-  there: look at the files, pick the fitting one and upload it with `POST /api/v1/images` (admin token). Do it against the
-  local dev stack only, never against a production API without being asked.
-- The front end already draws a calendar tile with the date (`publishedAt`) for an article, so nothing has to be written into
-  `content` for an article without a picture.
+  there: look at the files, pick the fitting one, upload it with `POST /api/v1/images` (admin token) and send its `id` as `imageId`
+  when creating or editing the article. Do it against the local dev stack only, never against a production API without being
+  asked. Keep the picture out of `content`.
+- An article without a cover image has `imageUrl: null`; the front end then draws a calendar tile with the date (`publishedAt`), so
+  nothing has to be written into `content` for it.
 - Gotchas:
     - Set the cache headers of the file with `response.set(...)` after the query succeeded. `@Header(...)` is applied before the
       handler runs, so 404 and 400 answers would carry `immutable` too (a scenario checks this).
