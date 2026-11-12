@@ -43,8 +43,10 @@ You do not need Node.js on your machine. All `npm`, `npx` and `node` commands ru
 
     `.env.dist` holds development values only, including a development `ADMIN_TOKEN`. Anywhere else, use your own long
     random value and never commit it. `PUBLIC_URL` is the address the API is published at (no trailing slash): the
-    addresses of uploaded images start with it. If you created `.env` before `ADMIN_TOKEN` or `PUBLIC_URL` existed, add
-    the line to it and recreate the app container with `docker compose up -d --force-recreate app`.
+    addresses of uploaded images start with it. `CORS_ORIGIN` is the address of the front end (its dev server), the only
+    address that may call the API from a browser; without it that is the default. If you created `.env` before
+    `ADMIN_TOKEN` or `PUBLIC_URL` existed, add the line to it and recreate the app container with
+    `docker compose up -d --force-recreate app`.
 
 3. Build and start the containers, and wait until both are healthy:
 
@@ -52,8 +54,9 @@ You do not need Node.js on your machine. All `npm`, `npx` and `node` commands ru
     docker compose up -d --build --wait
     ```
 
-    On every start the app container installs packages, generates the Prisma client, applies migrations, seeds the
-    database and starts Nest.js in watch mode, so code changes reload automatically.
+    On every start the app container installs packages, generates the Prisma client, applies migrations and starts
+    Nest.js in watch mode, so code changes reload automatically. The database starts empty: it holds only what you
+    publish (see [Publishing an article](#publishing-an-article)).
 
 4. Check that it works:
     - http://localhost/ returns the status and the current version, for example `{"status":"OK","version":"0.1.0"}`
@@ -98,21 +101,29 @@ running app.
 
 ## Database
 
-The schema lives in `prisma/schema.prisma` and seed data in `prisma/seed`. Migrations go to `prisma/migrations`.
+The schema lives in `prisma/schema.prisma` and sample data in `prisma/seed`. Migrations go to `prisma/migrations`.
 
 ```shell
 # apply migrations
 docker compose exec app npm run database:migrate
 
-# load seed data
+# load the sample data (only if you want sample articles and images)
 docker compose exec app npm run database:seed
 
-# drop all data and apply the migrations again (empty tables, run database:seed afterwards)
+# drop all data and apply the migrations again (empty tables)
 docker compose exec app npm run database:reset
 ```
 
-The seed runs on every start of the app container, so it is idempotent: articles that are already there are left
-untouched and missing ones are created.
+The sample data is for the tests. Nothing loads it when the app starts, so your database holds only what you publish. The
+tests load it themselves (`Given I use seed data`), which also resets the database: never run them against the stack that
+holds your articles.
+
+The data lives in the Docker volume `database-data`, so it survives `docker compose stop`, `down` and a rebuild.
+`docker compose down -v` deletes the volume and with it every article and image.
+
+> A database container created before this volume existed keeps its data in an anonymous volume, and the first
+> `docker compose up -d` after the change starts a new, empty database. Before you pull this change, save your data:
+> `docker compose exec -T database pg_dump -U user -d app | gzip > backup.sql.gz`.
 
 ## API
 
@@ -125,8 +136,9 @@ untouched and missing ones are created.
 | `DELETE /api/v1/articles/:id` | yes         | `204` without a body, `400` for an invalid ID, `404` when it is unknown                      |
 
 Writing needs the header `Authorization: Bearer <ADMIN_TOKEN>`: `401` without a token, `403` with a wrong one. The API sets
-the `id` and the `publishedAt` of an article itself, sending them (or any unknown field) is a `400`. A title has 3 to 255
-characters and a text 10 to 20000 characters. An article can have a cover image: send the `imageId` of an uploaded image (see
+the `id` of an article itself, sending it (or any unknown field) is a `400`. `publishedAt` is now unless you send one when
+you create the article: an ISO 8601 date and time with a time zone (`2023-09-01T12:00:00Z`), not in the future. It cannot be
+changed afterwards. A title has 3 to 255 characters and a text 10 to 20000 characters. An article can have a cover image: send the `imageId` of an uploaded image (see
 [Images](#images)). Every article answer has `imageId` and `imageUrl`, both `null` when there is no cover image.
 
 Every endpoint and response code is documented in Swagger at http://localhost/api. Click **Authorize**, paste the admin
@@ -160,6 +172,63 @@ The type of an image is read from the content of the file, never from its name, 
 refused with `415`. SVG is refused too, because it can carry a script. Images are stored in the database (a `bytea`
 column), so one backup covers articles and images. They never change: browsers may keep an image for a year. Deleting an
 image removes it as the cover image of its articles (they stay), and deleting an article keeps its image.
+
+## Publishing an article
+
+The easy way to add an article, with a picture, to your local API or to the one on the server: write the text in a file, drop
+the picture into a folder, run one command. It uploads the picture and creates the article with it as the cover image.
+
+1. Put the picture in `article-images/` (git-ignored).
+2. Write the article in `article-drafts/<name>.txt` (git-ignored). A header, an empty line, then the text:
+
+    ```
+    title: The beginning of my programming journey
+    date: 2023-09-01
+    image: zstio.jpg
+
+    The first paragraph of the article.
+
+    The second paragraph.
+    ```
+
+    - `title` is required. `date` is optional: `2023-09-01` or a full date and time (`2023-09-01T12:00:00Z`), the default is
+      now. `image` is optional: a file from `article-images/`, a path, or the ID of an image that is already uploaded.
+    - The blog shows the text as plain text, one paragraph per line. No Markdown, and no picture addresses in the text.
+
+3. Check it, then publish it (the app container must be running, `docker compose up -d`):
+
+    ```shell
+    docker compose exec app npm run article:publish -- article-drafts/my-article.txt --dry-run
+    docker compose exec app npm run article:publish -- article-drafts/my-article.txt
+    ```
+
+    This publishes to the API on your machine. If the article is refused (for example the date is in the future), the picture
+    that was uploaded for it is removed again.
+
+4. To publish to the server, give the address of the blog and the admin token of the server. The command only sends the token
+   to `https` addresses (and to your own machine):
+
+    ```shell
+    read -rs BLOG_ADMIN_TOKEN && export BLOG_ADMIN_TOKEN
+    docker compose exec -e BLOG_ADMIN_TOKEN app npm run article:publish -- article-drafts/my-article.txt --api https://blog.example.com
+    ```
+
+    `read -rs` asks for the token without showing it, so it does not end up in your shell history. `BLOG_API_URL` sets the
+    default of `--api`. Without a local stack running, use this instead of `docker compose exec app`, it needs no database:
+
+    ```shell
+    docker compose run --rm --no-deps -e BLOG_ADMIN_TOKEN --entrypoint npm app run article:publish -- article-drafts/my-article.txt --api https://blog.example.com
+    ```
+
+The address of the blog is not stored in an article. Addresses of pictures are built from `PUBLIC_URL` whenever an article is
+read, so moving the blog to a domain later does not touch the articles.
+
+## Deployment
+
+The blog runs on one small server (a VPS) with Docker Compose: Caddy gets the HTTPS certificate by itself and serves the front
+end and the API from one address, the database keeps its data in a volume, and a script makes backups. It works with an IP
+address now and with a domain later by changing one setting. The step-by-step guide is in
+[docs/deployment.md](docs/deployment.md).
 
 ## Versioning and releases
 
