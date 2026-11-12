@@ -3,6 +3,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+        # when compose recreates the database, the app starts again and applies the migrations to the new one
+        restart: true
     image: kaluzny-blog-back
     build:
       context: .
@@ -29,8 +31,13 @@ services:
       POSTGRES_DB: 'app'
     ports:
       - '5432:5432'
+    volumes:
+      - database-data:/var/lib/postgresql/data
     healthcheck:
       test: 'pg_isready -U user -d app'
       interval: 1s
       timeout: 500ms
       retries: 30
+
+volumes:
+  database-data:
