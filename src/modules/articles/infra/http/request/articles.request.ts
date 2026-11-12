@@ -2,12 +2,15 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, TransformFnParams } from 'class-transformer';
 import {
+  IsISO8601,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { IsNotInFuture } from '../../../../../core/validation/decorator/is-not-in-future.decorator';
 
 const TITLE_MIN_LENGTH = 3;
 const TITLE_MAX_LENGTH = 255;
@@ -36,6 +39,17 @@ const imageIdDocs = {
   nullable: true,
   example: '1ae9e000-0001-4000-8000-000000000001',
 };
+
+const publishedAtDocs = {
+  description:
+    'When the article was published, an ISO 8601 date and time that ends with a time zone (Z or an offset like +01:00). It cannot be in the future. Without it the article is published now.',
+  type: String,
+  format: 'date-time',
+  example: '2025-03-20T12:00:00.000Z',
+};
+
+// a date and time without a time zone would be read in the time zone of the server
+const ENDS_WITH_TIME_ZONE = /(Z|[+-]\d{2}:\d{2})$/;
 
 function trim({ value }: TransformFnParams) {
   return typeof value === 'string' ? value.trim() : value;
@@ -68,6 +82,17 @@ function ContentRules() {
   );
 }
 
+function PublishedAtRules() {
+  return applyDecorators(
+    IsISO8601({ strict: true }),
+    Matches(ENDS_WITH_TIME_ZONE, {
+      message:
+        'publishedAt must end with a time zone: Z or an offset like +01:00',
+    }),
+    IsNotInFuture(),
+  );
+}
+
 export class CreateArticleRequest {
   @ApiProperty(titleDocs)
   @TitleRules()
@@ -81,6 +106,11 @@ export class CreateArticleRequest {
   @ValidateIf(isImageSet)
   @IsUUID('4')
   imageId?: string | null;
+
+  @ApiPropertyOptional(publishedAtDocs)
+  @ValidateIf(isSent)
+  @PublishedAtRules()
+  publishedAt?: string;
 }
 
 export class UpdateArticleRequest {

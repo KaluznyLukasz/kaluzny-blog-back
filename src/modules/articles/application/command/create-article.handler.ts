@@ -15,6 +15,7 @@ export class CreateArticleHandler implements ICommandHandler<CreateArticleComman
         command.title,
         command.content,
         command.imageId,
+        command.publishedAt ?? new Date(),
       ),
     );
 
