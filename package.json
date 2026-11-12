@@ -20,7 +20,8 @@
     "test:functional": "npx cucumber-js",
     "database:reset": "npx prisma migrate reset --force",
     "database:migrate": "npx prisma migrate deploy",
-    "database:seed": "ts-node prisma/seed/seed.ts"
+    "database:seed": "ts-node prisma/seed/seed.ts",
+    "article:publish": "ts-node scripts/publish-article.ts"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.3",
