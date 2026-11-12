@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# Dumps the production database (articles and images) to backups/blog-<date>.sql.gz and keeps the 14 newest dumps.
+# Run it on the server, for example every night from cron. A dump that fails never replaces a good one.
+set -euo pipefail
+
+cd "$(dirname "$0")/../.."
+mkdir -p backups
+
+file="backups/blog-$(date +%F-%H%M).sql.gz"
+
+docker compose -f compose.prod.yaml --env-file .env.production exec -T database pg_dump -U blog -d blog | gzip > "$file.tmp"
+mv "$file.tmp" "$file"
+
+ls -1t backups/blog-*.sql.gz | tail -n +15 | xargs -r rm --
+echo "backup written to $file"

@@ -1,0 +1,69 @@
+# Production on one server (VPS): the blog is served over HTTPS from a single address.
+#
+#   docker compose -f compose.prod.yaml --env-file .env.production up -d --build --wait
+#
+# Caddy gets the HTTPS certificate by itself, serves the front end from ./site and passes /api to the app. The app and the
+# database are not published, only Caddy is reachable from outside. See docs/deployment.md.
+name: kaluzny-blog-prod
+
+services:
+  app:
+    build:
+      context: .
+      target: production
+    image: kaluzny-blog-back:production
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+        # when compose recreates the database, the app starts again and applies the migrations to the new one
+        restart: true
+    environment:
+      DATABASE_URL: 'postgres://blog:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}@database:5432/blog'
+      ADMIN_TOKEN: '${ADMIN_TOKEN:?set ADMIN_TOKEN in .env.production}'
+      PUBLIC_URL: '${PUBLIC_URL:-https://${SITE_ADDRESS:?set SITE_ADDRESS in .env.production}}'
+      CORS_ORIGIN: '${CORS_ORIGIN:-}'
+    healthcheck:
+      test: 'curl --fail http://localhost:3000 || exit 1'
+      interval: 5s
+      retries: 20
+      start_period: 30s
+      timeout: 3s
+
+  database:
+    image: postgres:16.2
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: 'blog'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}'
+      POSTGRES_DB: 'blog'
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: 'pg_isready -U blog -d blog'
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: '${SITE_ADDRESS:?set SITE_ADDRESS in .env.production}'
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./docker/prod/caddy:/etc/caddy:ro
+      - ./site:/srv/site:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  database-data:
+  caddy-data:
+  caddy-config:

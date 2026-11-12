@@ -6,8 +6,18 @@
 /output
 
 /.env
+/.env.production
 /.eslintcache
 
 # pictures for articles: dropped here by the author, uploaded through the API when an article needs one
 /article-images/*
 !/article-images/.gitkeep
+
+# texts of articles, written by the author and published with npm run article:publish
+/article-drafts/*
+!/article-drafts/.gitkeep
+
+# production on the server: the built front end that Caddy serves and the database dumps
+/site/*
+!/site/.gitkeep
+/backups/

@@ -58,7 +58,8 @@ export class Article {
     title: string,
     content: string,
     imageId: string | null,
+    publishedAt: Date,
   ): Article {
-    return new Article(id, title, content, new Date(), imageId);
+    return new Article(id, title, content, publishedAt, imageId);
   }
 }

@@ -1,0 +1,29 @@
+# SITE_ADDRESS is the address of the blog without https://: a domain such as blog.example.com, or a name that points at the
+# server's IP such as 203-0-113-10.sslip.io. For such a name Caddy gets and renews the HTTPS certificate by itself (ports 80
+# and 443 must be open). A name that starts with http:// is served without HTTPS (only for trying things out on your machine).
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# the API and its documentation go to the app
+	@api path /api /api/* /api-json
+	handle @api {
+		reverse_proxy app:3000
+	}
+
+	# the files of the front end have the hash of their content in the name, so they never change. A file that is not there
+	# is a 404, not a page: a browser that still asks for a file of an older version must not get HTML instead of a script.
+	handle /assets/* {
+		root * /srv/site
+		@found file
+		header @found Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# everything else is a page of the front end. It draws its pages in the browser, so an address like /blog/123 is answered
+	# with the same index.html.
+	handle {
+		root * /srv/site
+		try_files {path} /index.html
+		file_server
+	}
+}

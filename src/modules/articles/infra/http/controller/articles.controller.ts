@@ -38,8 +38,10 @@ import {
 } from '../request/articles.request';
 import {
   articleNotFoundExample,
+  futurePublishedAtExample,
   invalidIdExample,
   invalidImageIdExample,
+  invalidPublishedAtExample,
   rulesBrokenExample,
   serverOwnedFieldExample,
   unknownImageExample,
@@ -108,18 +110,20 @@ export class ArticlesController {
   @ApiOperation({ summary: 'Creates an article (admin only)' })
   @ApiCreatedResponse({
     description:
-      'The new article. The API sets its ID and its publication date.',
+      'The new article. The API sets its ID. Its publication date is the publishedAt that was sent, or now.',
     type: ArticleResponse,
   })
   @ApiBadRequestResponse({
     description:
-      'The data breaks a rule, has unknown fields or has fields owned by the server (id, publishedAt), or the cover image does not exist. Every wrong field is listed in violations.',
+      'The data breaks a rule (a publishedAt in the future is one), has unknown fields or the ID, which is owned by the server, or the cover image does not exist. Every wrong field is listed in violations.',
     type: GenericBadRequestResponse,
     examples: {
       rulesBroken: rulesBrokenExample,
       serverOwnedField: serverOwnedFieldExample,
       invalidImageId: invalidImageIdExample,
       unknownImage: unknownImageExample,
+      invalidPublishedAt: invalidPublishedAtExample,
+      futurePublishedAt: futurePublishedAtExample,
     },
   })
   async create(
@@ -133,6 +137,7 @@ export class ArticlesController {
         request.title,
         request.content,
         request.imageId ?? null,
+        request.publishedAt ? new Date(request.publishedAt) : null,
       ),
     );
 

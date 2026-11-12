@@ -21,6 +21,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 USER node
 
 FROM alpine-node-base AS production
+ENV NODE_ENV="production"
 COPY --chown=node:node docker/prod ./docker/prod
 COPY --chown=node:node prisma ./prisma
 COPY --chown=node:node prisma.config.ts ./

@@ -6,6 +6,7 @@ export class CreateArticleCommand extends Command<void> {
     readonly title: string,
     readonly content: string,
     readonly imageId: string | null,
+    readonly publishedAt: Date | null,
   ) {
     super();
   }

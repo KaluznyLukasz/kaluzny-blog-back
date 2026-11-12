@@ -1,13 +1,15 @@
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as pack from '../../../../package.json';
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
-function createSwaggerConfig() {
+// "Try it out" in Swagger UI calls the API where it is published (PUBLIC_URL), so it works on a server and on a domain too
+function createSwaggerConfig(publicUrl: string) {
   return new DocumentBuilder()
     .setTitle('Kałużny Blog API')
     .setDescription("REST API for the back end of Łukasz Kałużny's blog.")
     .setVersion(pack.version)
-    .addServer('http://localhost', 'Local development')
+    .addServer(publicUrl, 'This API')
     .setContact('Łukasz Kałużny', 'https://github.com/KaluznyLukasz', '')
     .addBearerAuth(
       {
@@ -23,7 +25,10 @@ function createSwaggerConfig() {
 }
 
 export function configureSwagger(app: INestApplication): void {
-  const config = createSwaggerConfig();
+  const publicUrl = (
+    app.get(ConfigService).get<string>('PUBLIC_URL') || 'http://localhost'
+  ).replace(/\/+$/, '');
+  const config = createSwaggerConfig(publicUrl);
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 }

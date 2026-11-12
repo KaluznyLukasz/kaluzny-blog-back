@@ -5,5 +5,4 @@ npm install
 
 npx prisma generate
 npm run database:migrate
-npm run database:seed
 npm run start:dev

@@ -46,6 +46,33 @@ export const unknownImageExample = {
   },
 };
 
+export const invalidPublishedAtExample = {
+  summary: 'The publication date is not an ISO 8601 date with a time zone',
+  value: {
+    statusCode: 400,
+    message: 'Request validation failed.',
+    error: 'Bad Request',
+    violations: {
+      publishedAt: [
+        'publishedAt must be a valid ISO 8601 date string',
+        'publishedAt must end with a time zone: Z or an offset like +01:00',
+      ],
+    },
+  },
+};
+
+export const futurePublishedAtExample = {
+  summary: 'The publication date is in the future',
+  value: {
+    statusCode: 400,
+    message: 'Request validation failed.',
+    error: 'Bad Request',
+    violations: {
+      publishedAt: ['publishedAt must not be in the future'],
+    },
+  },
+};
+
 export const serverOwnedFieldExample = {
   summary: 'A field owned by the server or an unknown field was sent',
   value: {
